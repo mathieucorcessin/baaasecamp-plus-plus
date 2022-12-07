@@ -30,6 +30,11 @@ function bulkArchiveTickets() {
   bulkButton.innerText = 'Bulk Archive';
   bulkButton.className = 'btn btn--small';
 
+  const selectAllButton = document.createElement('button');
+  selectAllButton.innerText = 'Select All';
+  selectAllButton.className = 'btn btn--small';
+  selectAllButton.style.marginRight = '10px';
+
   const validateButton = document.createElement('button');
   validateButton.innerText = 'Archive selected messages';
   validateButton.className = 'btn btn--small btn--primary';
@@ -48,14 +53,22 @@ function bulkArchiveTickets() {
     ticketElement.insertBefore(checkbox, ticketElement.firstChild);
   });
     
+  messageBoard.insertAdjacentElement('beforebegin', selectAllButton);
   messageBoard.insertAdjacentElement('beforebegin', validateButton);
   bulkButton.remove();
 
 });
 
-  validateButton.addEventListener('click', () => {
-    const checkboxes = document.querySelectorAll('.ywd-checkbox');
+  selectAllButton.addEventListener('click', () => {
+    checkboxes = document.querySelectorAll('.ywd-checkbox');
 
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = true;
+    });
+  });
+
+  validateButton.addEventListener('click', () => {
+    checkboxes = document.querySelectorAll('.ywd-checkbox');
     checkboxes.forEach((checkbox) => {
       if (checkbox.checked) {
         let messageId = checkbox.getAttribute('data-message-id');
