@@ -14,7 +14,7 @@ https://user-images.githubusercontent.com/110381337/206146288-4285f35e-7dba-4149
 
 ## How to install
 
-1. Download the latest release of the extension from the releases page on GitHub.
+1. Download the latest release of the extension from the [releases page](https://github.com/mathieucorcessin/baaasecamp-plus-plus/releases) on GitHub.
 2. Unzip the downloaded file.
     1. Open `basecamp.js` file.
     2. Replace `clientId`, `clientSecret`, `redirectUri` and `refreshToken` by your own. You can get this informations by following [this link](https://github.com/basecamp/api/blob/master/sections/authentication.md#oauth-2-from-scratch).
