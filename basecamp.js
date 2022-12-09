@@ -4,6 +4,7 @@ const redirectUri = 'https://';
 const refreshToken = '';
 
 const messageBoard = document.querySelector('.message-board__content');
+const newMessageLink = messageBoard ? document.querySelector('.perma__new a') : '';
 
 function getAccountInformations() {
   bucketIdMeta = document.querySelector('meta[name="current-bucket-id"]');
@@ -66,19 +67,36 @@ function getMessageId(checkbox) {
 }
 
 function bulkActions() {
+  const bulkActionsButton = createSecondaryButton('🛠 Bulk Actions');
+  bulkActionsButton.style.marginLeft = '10px';
+  newMessageLink ? newMessageLink.insertAdjacentElement('afterend', bulkActionsButton) : null;
 
   const bulkArchiveButton = createSecondaryButton('📁 Bulk Archive');
   bulkArchiveButton.style.marginRight = '10px';
-  messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkArchiveButton) : null;
 
   const bulkPinButton = createSecondaryButton('📌 Bulk Pin');
-  messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkPinButton) : null;
+  
+  const bulkActionsCancelButton = createSecondaryButton('Cancel');
+  bulkActionsCancelButton.style.marginLeft = '10px';
+  bulkActionsCancelButton.style.display = 'none';
+  newMessageLink ? newMessageLink.insertAdjacentElement('afterend', bulkActionsCancelButton) : null;
 
   const selectAllButton = createSecondaryButton('Select All');
   selectAllButton.style.marginRight = '10px';
 
   const validateBulkArchiveButton = createPrimaryButton('Archive selected messages');
   const validateBulkPinButton = createPrimaryButton('Pin selected messages');
+  
+  bulkActionsButton.addEventListener('click', () => {
+    messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkArchiveButton) : null;
+    messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkPinButton) : null;
+    bulkActionsButton.style.display = 'none';
+    bulkActionsCancelButton.style.display = 'initial';
+  });
+
+  bulkActionsCancelButton.addEventListener('click', () => {
+    location.reload();
+  });
 
   bulkArchiveButton.addEventListener('click', () => {
     createCheckboxesBeforeMessages();
