@@ -71,3 +71,37 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 
   }
 });
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+  if (message.type === 'pin_message') {
+    var bucketId = message.bucketId;
+    var currentAccountSlug = message.currentAccountSlug;
+    var messageId = message.messageId;
+    var apiToken = message.apiToken;
+
+    var url = 'https://3.basecampapi.com' + currentAccountSlug + '/buckets/' + bucketId + '/recordings/' + messageId + '/pin.json';
+    
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiToken
+      }
+    })
+    .then(response => {
+      if (response.ok) {
+        sendResponse({ status: 'success' });
+      }
+      else {
+        sendResponse({ status: 'error' });
+      }
+    })
+    .catch(error => {
+      console.error(error);
+      sendResponse({ status: 'error' });
+    });
+
+    return true;
+
+  }
+});

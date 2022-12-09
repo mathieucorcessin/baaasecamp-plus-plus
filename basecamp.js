@@ -3,47 +3,38 @@ const clientSecret = '';
 const redirectUri = 'https://';
 const refreshToken = '';
 
-function bulkArchiveTickets() {
+const messageBoard = document.querySelector('.message-board__content');
 
-  chrome.runtime.sendMessage({
-    type: 'auth_api',
-    refreshToken: refreshToken,
-    clientId: clientId,
-    clientSecret: clientSecret,
-    redirectUri: redirectUri
-  }, function(response) {
-    if (response.status === 'success') {
-      apiToken = (response.data.access_token);
-    }
-    else {
-      console.error('Error while connecting...');
-    }
-  });
-
-  const bucketIdMeta = document.querySelector('meta[name="current-bucket-id"]');
-  const bucketId = bucketIdMeta ? bucketIdMeta.content : '';
+function getAccountInformations() {
+  bucketIdMeta = document.querySelector('meta[name="current-bucket-id"]');
+  bucketId = bucketIdMeta ? bucketIdMeta.content : '';
   
-  const currentAccountSlugMeta = document.querySelector('meta[name="current-account-slug-path"]');
-  const currentAccountSlug = currentAccountSlugMeta.content;
+  currentAccountSlugMeta = document.querySelector('meta[name="current-account-slug-path"]');
+  currentAccountSlug = currentAccountSlugMeta.content;
 
-  const bulkButton = document.createElement('button');
-  bulkButton.innerText = 'Bulk Archive';
-  bulkButton.className = 'btn btn--small';
+  accountInformations = [bucketId, currentAccountSlug];
 
-  const selectAllButton = document.createElement('button');
-  selectAllButton.innerText = 'Select All';
-  selectAllButton.className = 'btn btn--small';
-  selectAllButton.style.marginRight = '10px';
+  return accountInformations;
+}
 
-  const validateButton = document.createElement('button');
-  validateButton.innerText = 'Archive selected messages';
-  validateButton.className = 'btn btn--small btn--primary';
+function createPrimaryButton(label) {
+  button = document.createElement('button');
+  button.innerText = label;
+  button.className = 'btn btn--small btn--primary';
 
-  const messageBoard = document.querySelector('.message-board__content');
-  messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkButton) : null;
+  return button;
+}
 
-  bulkButton.addEventListener('click', () => {
-    const ticketElements = document.querySelectorAll('.messages-table__what');
+function createSecondaryButton(label) {
+  button = document.createElement('button');
+  button.innerText = label;
+  button.className = 'btn btn--small';
+
+  return button;
+}
+
+function createCheckboxesBeforeMessages() {
+  const ticketElements = document.querySelectorAll('.messages-table__what');
 
     ticketElements.forEach((ticketElement) => {
     const checkbox = document.createElement('input');
@@ -51,54 +42,151 @@ function bulkArchiveTickets() {
     checkbox.className = 'ywd-checkbox';
 
     ticketElement.insertBefore(checkbox, ticketElement.firstChild);
-  });
-    
-  messageBoard.insertAdjacentElement('beforebegin', selectAllButton);
-  messageBoard.insertAdjacentElement('beforebegin', validateButton);
-  bulkButton.remove();
+  })
+}
 
-});
+function getAllCheckboxes() {
+  checkboxes = document.querySelectorAll('.ywd-checkbox');
+
+  return checkboxes;
+}
+
+function getMessageId(checkbox) {
+  messageId = checkbox.getAttribute('data-message-id');
+  linkElement = checkbox.parentElement.querySelector('a');
+
+  urlObject = new URL(linkElement.href);
+  path = urlObject.pathname;
+  segments = path.split('/');
+  lastSegment = segments[segments.length - 1];
+
+  messageId = lastSegment;
+
+  return messageId;
+}
+
+function bulkActions() {
+
+  const bulkArchiveButton = createSecondaryButton('📁 Bulk Archive');
+  bulkArchiveButton.style.marginRight = '10px';
+  messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkArchiveButton) : null;
+
+  const bulkPinButton = createSecondaryButton('📌 Bulk Pin');
+  messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkPinButton) : null;
+
+  const selectAllButton = createSecondaryButton('Select All');
+  selectAllButton.style.marginRight = '10px';
+
+  const validateBulkArchiveButton = createPrimaryButton('Archive selected messages');
+  const validateBulkPinButton = createPrimaryButton('Pin selected messages');
+
+  bulkArchiveButton.addEventListener('click', () => {
+    createCheckboxesBeforeMessages();
+
+    messageBoard.insertAdjacentElement('beforebegin', selectAllButton);
+    messageBoard.insertAdjacentElement('beforebegin', validateBulkArchiveButton);
+    bulkPinButton.remove();
+    bulkArchiveButton.remove();
+  });
+
+  bulkPinButton.addEventListener('click', () => {
+    createCheckboxesBeforeMessages();
+
+    messageBoard.insertAdjacentElement('beforebegin', selectAllButton);
+    messageBoard.insertAdjacentElement('beforebegin', validateBulkPinButton);
+    bulkPinButton.remove();
+    bulkArchiveButton.remove();
+  });
 
   selectAllButton.addEventListener('click', () => {
-    checkboxes = document.querySelectorAll('.ywd-checkbox');
+    checkboxes = getAllCheckboxes();
 
     checkboxes.forEach((checkbox) => {
       checkbox.checked = true;
     });
   });
 
-  validateButton.addEventListener('click', () => {
-    checkboxes = document.querySelectorAll('.ywd-checkbox');
+  validateBulkArchiveButton.addEventListener('click', () => {
+    checkboxes = getAllCheckboxes();
     checkboxes.forEach((checkbox) => {
       if (checkbox.checked) {
-        let messageId = checkbox.getAttribute('data-message-id');
-        const linkElement = checkbox.parentElement.querySelector('a');
-
-        const urlObject = new URL(linkElement.href);
-        const path = urlObject.pathname;
-        const segments = path.split('/');
-        let lastSegment = segments[segments.length - 1];
-
-        messageId = lastSegment;
+        messageId = getMessageId(checkbox);
 
         chrome.runtime.sendMessage({
-          type: 'archive_message',
-          bucketId: bucketId,
-          currentAccountSlug: currentAccountSlug,
-          messageId: messageId,
-          apiToken: apiToken
+          type: 'auth_api',
+          refreshToken: refreshToken,
+          clientId: clientId,
+          clientSecret: clientSecret,
+          redirectUri: redirectUri
         }, function(response) {
           if (response.status === 'success') {
-            console.log('Messages archived successfully!');
-            location.reload();
+            apiToken = (response.data.access_token);
+
+            chrome.runtime.sendMessage({
+              type: 'archive_message',
+              bucketId: getAccountInformations()[0],
+              currentAccountSlug: getAccountInformations()[1],
+              messageId: messageId,
+              apiToken: apiToken
+            }, function(response) {
+              if (response.status === 'success') {
+                console.log('Messages archived successfully!');
+                location.reload();
+              }
+              else {
+                console.error('Error while archiving...');
+              }
+            });
           }
           else {
-            console.error('Error while archiving...');
+            console.error('Error while connecting to Basecamp API...');
           }
         });
       }
     });
   });
+
+  validateBulkPinButton.addEventListener('click', () => {
+    checkboxes = getAllCheckboxes();
+    checkboxes.forEach((checkbox) => {
+      if (checkbox.checked) {
+        messageId = getMessageId(checkbox);
+
+        chrome.runtime.sendMessage({
+          type: 'auth_api',
+          refreshToken: refreshToken,
+          clientId: clientId,
+          clientSecret: clientSecret,
+          redirectUri: redirectUri
+        }, function(response) {
+          if (response.status === 'success') {
+            apiToken = (response.data.access_token);
+
+            chrome.runtime.sendMessage({
+              type: 'pin_message',
+              bucketId: getAccountInformations()[0],
+              currentAccountSlug: getAccountInformations()[1],
+              messageId: messageId,
+              apiToken: apiToken
+            }, function(response) {
+              if (response.status === 'success') {
+                console.log('Messages pinned successfully!');
+                location.reload();
+              }
+              else {
+                console.error('Error while pinning...');
+              }
+            });
+          }
+          else {
+            console.error('Error while connecting to Basecamp API...');
+          }
+        });
+
+        
+      }
+    });
+  });
 }
 
-bulkArchiveTickets();
+bulkActions();
