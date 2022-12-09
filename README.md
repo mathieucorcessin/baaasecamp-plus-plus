@@ -12,6 +12,10 @@ You can select multiple messages to archive at once.
 
 https://user-images.githubusercontent.com/110381337/206146288-4285f35e-7dba-4149-8528-7c3f03e79907.mov
 
+### Bulk Pin
+
+You can select multiple messages to pin at once.
+
 ## How to install
 
 1. Download the latest release of the extension from the [releases page](https://github.com/mathieucorcessin/baaasecamp-plus-plus/releases) on GitHub.
