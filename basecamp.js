@@ -107,10 +107,12 @@ function bulkActions() {
   });
 
   validateBulkArchiveButton.addEventListener('click', () => {
+    allMessagesId = [];
     checkboxes = getAllCheckboxes();
     checkboxes.forEach((checkbox) => {
       if (checkbox.checked) {
         messageId = getMessageId(checkbox);
+        allMessagesId.push(messageId);
 
         chrome.runtime.sendMessage({
           type: 'auth_api',
@@ -126,7 +128,7 @@ function bulkActions() {
               type: 'archive_message',
               bucketId: getAccountInformations()[0],
               currentAccountSlug: getAccountInformations()[1],
-              messageId: messageId,
+              allMessagesId: allMessagesId,
               apiToken: apiToken
             }, function(response) {
               if (response.status === 'success') {
@@ -147,10 +149,12 @@ function bulkActions() {
   });
 
   validateBulkPinButton.addEventListener('click', () => {
+    allMessagesId = [];
     checkboxes = getAllCheckboxes();
     checkboxes.forEach((checkbox) => {
       if (checkbox.checked) {
         messageId = getMessageId(checkbox);
+        allMessagesId.push(messageId);
 
         chrome.runtime.sendMessage({
           type: 'auth_api',
@@ -166,7 +170,7 @@ function bulkActions() {
               type: 'pin_message',
               bucketId: getAccountInformations()[0],
               currentAccountSlug: getAccountInformations()[1],
-              messageId: messageId,
+              allMessagesId: allMessagesId,
               apiToken: apiToken
             }, function(response) {
               if (response.status === 'success') {
@@ -181,9 +185,7 @@ function bulkActions() {
           else {
             console.error('Error while connecting to Basecamp API...');
           }
-        });
-
-        
+        }); 
       }
     });
   });
