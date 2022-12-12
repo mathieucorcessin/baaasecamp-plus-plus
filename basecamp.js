@@ -131,37 +131,37 @@ function bulkActions() {
       if (checkbox.checked) {
         messageId = getMessageId(checkbox);
         allMessagesId.push(messageId);
+      }
+    });
+
+    chrome.runtime.sendMessage({
+      type: 'auth_api',
+      refreshToken: refreshToken,
+      clientId: clientId,
+      clientSecret: clientSecret,
+      redirectUri: redirectUri
+    }, function(response) {
+      if (response.status === 'success') {
+        apiToken = (response.data.access_token);
 
         chrome.runtime.sendMessage({
-          type: 'auth_api',
-          refreshToken: refreshToken,
-          clientId: clientId,
-          clientSecret: clientSecret,
-          redirectUri: redirectUri
+          type: 'archive_message',
+          bucketId: getAccountInformations()[0],
+          currentAccountSlug: getAccountInformations()[1],
+          allMessagesId: allMessagesId,
+          apiToken: apiToken
         }, function(response) {
           if (response.status === 'success') {
-            apiToken = (response.data.access_token);
-
-            chrome.runtime.sendMessage({
-              type: 'archive_message',
-              bucketId: getAccountInformations()[0],
-              currentAccountSlug: getAccountInformations()[1],
-              allMessagesId: allMessagesId,
-              apiToken: apiToken
-            }, function(response) {
-              if (response.status === 'success') {
-                console.log('Messages archived successfully!');
-                location.reload();
-              }
-              else {
-                console.error('Error while archiving...');
-              }
-            });
+            console.log('Messages archived successfully!');
+            location.reload();
           }
           else {
-            console.error('Error while connecting to Basecamp API...');
+            console.error('Error while archiving...');
           }
         });
+      }
+      else {
+        console.error('Error while connecting to Basecamp API...');
       }
     });
   });
@@ -173,39 +173,38 @@ function bulkActions() {
       if (checkbox.checked) {
         messageId = getMessageId(checkbox);
         allMessagesId.push(messageId);
-
-        chrome.runtime.sendMessage({
-          type: 'auth_api',
-          refreshToken: refreshToken,
-          clientId: clientId,
-          clientSecret: clientSecret,
-          redirectUri: redirectUri
-        }, function(response) {
-          if (response.status === 'success') {
-            apiToken = (response.data.access_token);
-
-            chrome.runtime.sendMessage({
-              type: 'pin_message',
-              bucketId: getAccountInformations()[0],
-              currentAccountSlug: getAccountInformations()[1],
-              allMessagesId: allMessagesId,
-              apiToken: apiToken
-            }, function(response) {
-              if (response.status === 'success') {
-                console.log('Messages pinned successfully!');
-                location.reload();
-              }
-              else {
-                console.error('Error while pinning...');
-              }
-            });
-          }
-          else {
-            console.error('Error while connecting to Basecamp API...');
-          }
-        }); 
       }
     });
+      chrome.runtime.sendMessage({
+        type: 'auth_api',
+        refreshToken: refreshToken,
+        clientId: clientId,
+        clientSecret: clientSecret,
+        redirectUri: redirectUri
+      }, function(response) {
+        if (response.status === 'success') {
+          apiToken = (response.data.access_token);
+
+          chrome.runtime.sendMessage({
+            type: 'pin_message',
+            bucketId: getAccountInformations()[0],
+            currentAccountSlug: getAccountInformations()[1],
+            allMessagesId: allMessagesId,
+            apiToken: apiToken
+          }, function(response) {
+            if (response.status === 'success') {
+              console.log('Messages pinned successfully!');
+              location.reload();
+            }
+            else {
+              console.error('Error while pinning...');
+            }
+          });
+        }
+        else {
+          console.error('Error while connecting to Basecamp API...');
+        }
+      });
   });
 }
 
