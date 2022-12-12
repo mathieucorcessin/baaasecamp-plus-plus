@@ -10,13 +10,13 @@ At Yes We Dev, we use Basecamp with our clients. I developed this extension to a
 
 You can select multiple messages to archive at once.
 
-https://user-images.githubusercontent.com/110381337/206731224-8694f929-a124-4ff0-a18e-f0d8ab46af87.mov
+https://user-images.githubusercontent.com/110381337/206746947-15b21def-ee29-4ec1-82f0-a7ef8d4c0a03.mov
 
 ### Bulk Pin
 
 You can select multiple messages to pin at once.
 
-https://user-images.githubusercontent.com/110381337/206730808-ff31645a-999c-4838-84bf-88da0c2c3fdb.mov
+https://user-images.githubusercontent.com/110381337/206746975-f11188e6-d1ee-420a-b294-8f879586261f.mov
 
 ## How to install
 
