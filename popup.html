@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baaasecamp++</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        form {
+            width: 400px;
+            margin: auto;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 20px; 
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .info {
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Baaasecamp++</h1>
+    <form id="credentialsForm">
+        <div class="info">All fields are required. You can get this informations by following <a href="https://github.com/basecamp/api/blob/master/sections/authentication.md#oauth-2-from-scratch" target="_blank">this link</a>.</div>
+        
+        <label for="clientId">Client ID:</label>
+        <input type="text" id="clientId" name="clientId" required>
+        
+        <label for="clientSecret">Client Secret:</label>
+        <input type="text" id="clientSecret" name="clientSecret" required>
+        
+        <label for="redirectUri">Redirect URI:</label>
+        <input type="text" id="redirectUri" name="redirectUri" required>
+        
+        <label for="refreshToken">Refresh Token:</label>
+        <input type="text" id="refreshToken" name="refreshToken" required>
+        
+        <input type="submit" value="Save">
+        
+        <div id="errorMessage" class="message error" style="display:none;"></div>
+        <div id="successMessage" class="message success" style="display:none;"></div>
+    </form>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

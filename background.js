@@ -1,111 +1,77 @@
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  if (message.type === 'auth_api') {
-    var clientId = message.clientId;
-    var clientSecret = message.clientSecret;
-    var redirectUri = message.redirectUri;
-    var refreshToken = message.refreshToken;
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  switch (message.type) {
+      case 'auth_api':
+          handleAuthApi(message, sendResponse);
+          break;
+      case 'archive_message':
+          handleBulkAction(message, sendResponse, 'archive');
+          break;
+      case 'pin_message':
+          handleBulkAction(message, sendResponse, 'pin');
+          break;
+  }
+  return true;
+});
 
-    var url = 'https://launchpad.37signals.com/authorization/token?type=refresh&refresh_token=' + refreshToken + '&client_id=' + clientId + '&redirect_uri=' + redirectUri + '&client_secret=' + clientSecret;
-    
-    fetch(url, {
+function handleAuthApi(message, sendResponse) {
+  const { clientId, clientSecret, redirectUri, refreshToken } = message;
+  const url = `https://launchpad.37signals.com/authorization/token?type=refresh&refresh_token=${refreshToken}&client_id=${clientId}&redirect_uri=${redirectUri}&client_secret=${clientSecret}`;
+
+  fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+          'Content-Type': 'application/json'
       }
-    })
-    .then(response => {
-      statusIsOk = response.ok;
-      return response.json();
-    })
-    .then(data => {
-      if (statusIsOk) {
-        sendResponse({ 
-          status: 'success',
-          data: data,
-        });
-      }
-      else {
-        sendResponse({ status: 'error' });
-      }
-    })
-    .catch(error => {
-      console.error(error);
-      sendResponse({ status: 'error' });
-    });
+  })
+  .then(handleFetchResponse)
+  .then(data => sendResponse({ status: 'success', data }))
+  .catch(error => handleError(error, sendResponse));
+}
 
-    return true;
+function handleBulkAction(message, sendResponse, action) {
+  const { bucketId, currentAccountSlug, allMessagesId, apiToken } = message;
+  let urlPart, method;
 
+  switch (action) {
+      case 'archive':
+          urlPart = 'status/archived.json';
+          method = 'PUT';
+          break;
+      case 'pin':
+          urlPart = 'pin.json';
+          method = 'POST';
+          break;
+      default:
+          return handleError(new Error('Invalid action'), sendResponse);
   }
-});
 
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  if (message.type === 'archive_message') {
-    var bucketId = message.bucketId;
-    var currentAccountSlug = message.currentAccountSlug;
-    var allMessagesId = message.allMessagesId;
-    var apiToken = message.apiToken;
+  const requests = allMessagesId.map((messageId) => {
+      const url = `https://3.basecampapi.com${currentAccountSlug}/buckets/${bucketId}/recordings/${messageId}/${urlPart}`;
 
-    allMessagesId.forEach((messageId) => {
-      var url = 'https://3.basecampapi.com' + currentAccountSlug + '/buckets/' + bucketId + '/recordings/' + messageId + '/status/archived.json';
-
-      fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + apiToken
-        }
+      return fetch(url, {
+          method,
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiToken}`
+          }
       })
-      .then(response => {
-        if (response.ok) {
-          sendResponse({ status: 'success' });
-        }
-        else {
-          sendResponse({ status: 'error' });
-        }
-      })
-      .catch(error => {
-        console.error(error);
-        sendResponse({ status: 'error' });
-      });
-    });
+      .then(handleFetchResponse)
+      .catch(error => handleError(error, sendResponse));
+  });
 
-    return true;
+  Promise.all(requests)
+      .then(() => sendResponse({ status: 'success' }))
+      .catch(error => handleError(error, sendResponse));
 
-  }
-});
+  return true;
+}
 
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  if (message.type === 'pin_message') {
-    var bucketId = message.bucketId;
-    var currentAccountSlug = message.currentAccountSlug;
-    var allMessagesId = message.allMessagesId;
-    var apiToken = message.apiToken;
+function handleFetchResponse(response) {
+  if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+  return response.text().then(text => text ? JSON.parse(text) : {});
+}
 
-    allMessagesId.forEach((messageId) => {
-      var url = 'https://3.basecampapi.com' + currentAccountSlug + '/buckets/' + bucketId + '/recordings/' + messageId + '/pin.json';
-      
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + apiToken
-        }
-      })
-      .then(response => {
-        if (response.ok) {
-          sendResponse({ status: 'success' });
-        }
-        else {
-          sendResponse({ status: 'error' });
-        }
-      })
-      .catch(error => {
-        console.error(error);
-        sendResponse({ status: 'error' });
-      });
-    });
-
-    return true;
-
-  }
-});
+function handleError(error, sendResponse) {
+  console.error(error);
+  sendResponse({ status: 'error', error: error.message });
+}

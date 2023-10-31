@@ -2,9 +2,12 @@
   "name": "Baaasecamp++",
   "description": "Add more features to Basecamp and save time.",
   "homepage_url": "https://yeswedev.bzh",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "Mathieu Corcessin",
   "manifest_version": 3,
+  "action": {
+    "default_popup": "popup.html"
+  },
   "content_scripts": [
     {
       "run_at" : "document_idle",
@@ -24,7 +27,9 @@
   },
   "permissions": [
     "tabs",
-    "scripting"
+    "scripting",
+    "storage",
+    "activeTab"
   ],
   "host_permissions": [
     "https://*/*",

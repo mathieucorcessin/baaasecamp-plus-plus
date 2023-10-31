@@ -1,211 +1,320 @@
-const clientId = '';
-const clientSecret = '';
-const redirectUri = 'https://';
-const refreshToken = '';
+class UserSettings {
+	constructor() {
+		this.loadData();
+	}
 
-const messageBoard = document.querySelector('.message-board__content');
-const newMessageLink = messageBoard ? document.querySelector('.perma__new a') : '';
+	loadData() {
+		return new Promise((resolve, reject) => {
+			chrome.storage.sync.get(['clientId', 'clientSecret', 'redirectUri', 'refreshToken'], (items) => {
+				if (chrome.runtime.lastError) {
+					return reject(chrome.runtime.lastError);
+				}
+				this.clientId = items.clientId;
+				this.clientSecret = items.clientSecret;
+				this.redirectUri = items.redirectUri;
+				this.refreshToken = items.refreshToken;
+				resolve();
+			});
+		});
+	}
 
-function getAccountInformations() {
-  bucketIdMeta = document.querySelector('meta[name="current-bucket-id"]');
-  bucketId = bucketIdMeta ? bucketIdMeta.content : '';
-  
-  currentAccountSlugMeta = document.querySelector('meta[name="current-account-slug-path"]');
-  currentAccountSlug = currentAccountSlugMeta.content;
+	getClientId() {
+		return this.clientId;
+	}
 
-  accountInformations = [bucketId, currentAccountSlug];
+	getClientSecret() {
+		return this.clientSecret;
+	}
 
-  return accountInformations;
+	getRedirectUri() {
+		return this.redirectUri;
+	}
+
+	getRefreshToken() {
+		return this.refreshToken;
+	}
+}
+class DOMManipulator {
+	constructor() {
+		this.messageBoard = document.querySelector('.message-board__content');
+		this.newMessageButton = this.messageBoard ? document.querySelector('.perma__new a') : '';
+		this.messages = this.messageBoard ? document.querySelectorAll('.messages-table__what') : [];
+		this.checkboxes = [];
+		this.bucketIdMeta = document.querySelector('meta[name="current-bucket-id"]');
+		this.bucketId = this.bucketIdMeta ? this.bucketIdMeta.content : '';
+		this.currentAccountSlugMeta = document.querySelector('meta[name="current-account-slug-path"]');
+		this.currentAccountSlug = this.currentAccountSlugMeta.content;
+	}
+
+	getMessageBoard() {
+		return this.messageBoard;
+	}
+
+	getNewMessageButton() {
+		return this.newMessageButton;
+	}
+
+	getMessages() {
+		return this.messages;
+	}
+
+	getAllCheckboxes() {
+		this.checkboxes = document.querySelectorAll('.bsc-plus-plus--checkbox');
+		return this.checkboxes;
+	}
+
+	getBucketId() {
+		return this.bucketId
+	}
+
+	getCurrentAccountSlug() {
+		return this.currentAccountSlug;
+	}
+
+	static createButton(label, classNames) {
+		const button = document.createElement('button');
+		button.innerText = label;
+		button.className = classNames;
+
+		return button;
+	}
+
+	static insertAdjacentElement(referenceNode, newElement, position = 'afterend') {
+		referenceNode.insertAdjacentElement(position, newElement);
+	}
+
+	static setStyle(element, property, value) {
+		element.style[property] = value;
+		return element;
+	}
+
+	static insertCheckboxesAndCreateSelectAllButton(domManipulatorInstance, ticketElements) {
+		if (ticketElements) {
+			ticketElements.forEach((ticketElement) => {
+				const checkbox = document.createElement('input');
+				checkbox.type = 'checkbox';
+				checkbox.className = 'bsc-plus-plus--checkbox';
+				ticketElement.insertBefore(checkbox, ticketElement.firstChild);
+			});
+		}
+
+		const bulkButtons = document.querySelectorAll('.bsc-plus-plus--bulk');
+
+		if (bulkButtons) {
+			bulkButtons.forEach((button) => {
+				button.remove();
+			});
+		}
+
+		const selectAllButton = this.setStyle(
+			this.createButton('Select All', 'btn btn--small'),
+			'marginRight', '10px'
+		);
+
+		const messageBoard = domManipulatorInstance.getMessageBoard();
+
+		if (messageBoard) {
+			messageBoard.insertAdjacentElement('beforebegin', selectAllButton);
+			selectAllButton.addEventListener('click', () => {
+				BulkAction.toggleCheckboxes(selectAllButton);
+			});
+		}
+	}
+}
+class BulkAction {
+	static toggleCheckboxes(selectAllButton) {
+		const domManipulator = new DOMManipulator();
+		let checkboxes = domManipulator.getAllCheckboxes();
+
+		checkboxes = [...checkboxes];
+		const checkAll = checkboxes.some(checkbox => !checkbox.checked);
+
+		checkboxes.forEach((checkbox) => {
+			checkbox.checked = checkAll;
+		});
+
+		selectAllButton.textContent = checkAll ? 'Unselect All' : 'Select All';
+	}
+
+	static getMessageId(checkbox) {
+		const messageIdAttr = checkbox.getAttribute('data-message-id');
+		const linkElement = checkbox.parentElement.querySelector('a');
+		const urlObject = new URL(linkElement.href);
+		const path = urlObject.pathname;
+		const segments = path.split('/');
+		return segments[segments.length - 1] || messageIdAttr;
+	}
+
+	static getSelectedMessageIds() {
+		const domManipulator = new DOMManipulator();
+		const checkboxes = domManipulator.getAllCheckboxes();
+		const selectedMessageIds = [];
+
+		checkboxes.forEach((checkbox) => {
+			if (checkbox.checked) {
+				const messageId = this.getMessageId(checkbox);
+				selectedMessageIds.push(messageId);
+			}
+		});
+
+		return selectedMessageIds;
+	}
+
+	static performBulkAction(actionType) {
+		const selectedMessageIds = this.getSelectedMessageIds();
+
+		if (!selectedMessageIds.length) {
+			console.warn('No messages selected for bulk action.');
+			return;
+		}
+
+		switch (actionType) {
+			case 'archive':
+				this.executeBulkAction('archive_message', selectedMessageIds, 'Messages archived successfully!', 'Error while archiving...');
+				break;
+			case 'pin':
+				this.executeBulkAction('pin_message', selectedMessageIds, 'Messages pinned successfully!', 'Error while pinning...');
+				break;
+			default:
+				console.warn('Invalid action type specified for bulk action.');
+		}
+	}
+
+	static executeBulkAction(actionType, selectedMessageIds, successMessage, errorMessage) {
+		const userSettings = new UserSettings();
+		const domManipulator = new DOMManipulator();
+
+		userSettings.loadData().then(() => {
+			chrome.runtime.sendMessage({
+				type: 'auth_api',
+				refreshToken: userSettings.getRefreshToken(),
+				clientId: userSettings.getClientId(),
+				clientSecret: userSettings.getClientSecret(),
+				redirectUri: userSettings.getRedirectUri()
+			}, function(response) {
+				if (response.status === 'success') {
+					const apiToken = response.data.access_token;
+
+					chrome.runtime.sendMessage({
+						type: actionType,
+						bucketId: domManipulator.getBucketId(),
+						currentAccountSlug: domManipulator.getCurrentAccountSlug(),
+						allMessagesId: selectedMessageIds,
+						apiToken: apiToken
+					}, function(response) {
+						if (response.status === 'success') {
+							console.log(successMessage);
+							location.reload();
+						} else {
+							console.error(errorMessage + response.error);
+						}
+					});
+				} else {
+					console.error('Error while connecting to Basecamp API...');
+				}
+			});
+		}).catch(error => {
+			console.error(error);
+		});
+	}
 }
 
-function createPrimaryButton(label) {
-  button = document.createElement('button');
-  button.innerText = label;
-  button.className = 'btn btn--small btn--primary';
+function createAndSetupBulkActionsButton() {
+	const bulkActionsButton = DOMManipulator.setStyle(
+		DOMManipulator.createButton('🛠 Bulk Actions', 'btn btn--small'),
+		'marginLeft', '10px'
+	);
 
-  return button;
+	const domManipulator = new DOMManipulator();
+	const newMessageButton = domManipulator.getNewMessageButton();
+
+	if (newMessageButton) {
+		newMessageButton.insertAdjacentElement('afterend', bulkActionsButton);
+	}
+
+	const bulkArchiveButton = createAndSetupBulkArchiveButton();
+	const bulkPinButton = createAndSetupBulkPinButton();
+	const bulkCancelButton = createAndSetupBulkCancelButton();
+
+	bulkActionsButton.addEventListener('click', () => {
+		DOMManipulator.setStyle(bulkActionsButton, 'display', 'none');
+		DOMManipulator.setStyle(bulkCancelButton, 'display', 'initial');
+		DOMManipulator.setStyle(bulkCancelButton, 'marginLeft', '10px');
+
+		if (newMessageButton) {
+			newMessageButton.insertAdjacentElement('afterend', bulkCancelButton);
+		}
+
+		const messageBoard = domManipulator.getMessageBoard();
+
+		if (messageBoard) {
+			messageBoard.insertAdjacentElement('beforebegin', bulkArchiveButton);
+			messageBoard.insertAdjacentElement('beforebegin', bulkPinButton);
+		}
+	});
 }
 
-function createSecondaryButton(label) {
-  button = document.createElement('button');
-  button.innerText = label;
-  button.className = 'btn btn--small';
+function createAndSetupBulkArchiveButton() {
+	const bulkArchiveButton = DOMManipulator.setStyle(
+		DOMManipulator.createButton('📁 Bulk Archive', 'btn btn--small bsc-plus-plus--bulk'),
+		'marginRight', '10px'
+	);
 
-  return button;
+	bulkArchiveButton.addEventListener('click', () => {
+		const domManipulator = new DOMManipulator();
+		DOMManipulator.insertCheckboxesAndCreateSelectAllButton(domManipulator, domManipulator.getMessages());
+
+		const messageBoard = domManipulator.getMessageBoard();
+
+		if (messageBoard) {
+			const submitButton = DOMManipulator.createButton('Archive selected messages', 'btn btn--small btn--primary');
+			messageBoard.insertAdjacentElement('beforebegin', submitButton);
+
+			submitButton.addEventListener('click', () => {
+				BulkAction.performBulkAction('archive');
+			});
+		}
+	});
+
+	return bulkArchiveButton;
 }
 
-function createCheckboxesBeforeMessages() {
-  const ticketElements = document.querySelectorAll('.messages-table__what');
+function createAndSetupBulkPinButton() {
+	const bulkPinButton = DOMManipulator.setStyle(
+		DOMManipulator.createButton('📌 Bulk Pin', 'btn btn--small bsc-plus-plus--bulk'),
+		'marginRight', '10px'
+	);
 
-    ticketElements.forEach((ticketElement) => {
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.className = 'ywd-checkbox';
+	bulkPinButton.addEventListener('click', () => {
+		const domManipulator = new DOMManipulator();
+		DOMManipulator.insertCheckboxesAndCreateSelectAllButton(domManipulator, domManipulator.getMessages());
 
-    ticketElement.insertBefore(checkbox, ticketElement.firstChild);
-  })
+		const messageBoard = domManipulator.getMessageBoard();
+
+		if (messageBoard) {
+			const submitButton = DOMManipulator.createButton('Pin selected messages', 'btn btn--small btn--primary');
+			messageBoard.insertAdjacentElement('beforebegin', submitButton);
+
+			submitButton.addEventListener('click', () => {
+				BulkAction.performBulkAction('pin');
+			});
+		}
+	});
+
+	return bulkPinButton;
 }
 
-function getAllCheckboxes() {
-  checkboxes = document.querySelectorAll('.ywd-checkbox');
+function createAndSetupBulkCancelButton() {
+	const bulkCancelButton = DOMManipulator.setStyle(
+		DOMManipulator.createButton('Cancel', 'btn btn--small'),
+		'display', 'none'
+	);
 
-  return checkboxes;
+	bulkCancelButton.addEventListener('click', () => {
+		location.reload();
+	});
+
+	return bulkCancelButton;
 }
 
-function getMessageId(checkbox) {
-  messageId = checkbox.getAttribute('data-message-id');
-  linkElement = checkbox.parentElement.querySelector('a');
-
-  urlObject = new URL(linkElement.href);
-  path = urlObject.pathname;
-  segments = path.split('/');
-  lastSegment = segments[segments.length - 1];
-
-  messageId = lastSegment;
-
-  return messageId;
-}
-
-function bulkActions() {
-  const bulkActionsButton = createSecondaryButton('🛠 Bulk Actions');
-  bulkActionsButton.style.marginLeft = '10px';
-  newMessageLink ? newMessageLink.insertAdjacentElement('afterend', bulkActionsButton) : null;
-
-  const bulkArchiveButton = createSecondaryButton('📁 Bulk Archive');
-  bulkArchiveButton.style.marginRight = '10px';
-
-  const bulkPinButton = createSecondaryButton('📌 Bulk Pin');
-  
-  const bulkActionsCancelButton = createSecondaryButton('Cancel');
-  bulkActionsCancelButton.style.marginLeft = '10px';
-  bulkActionsCancelButton.style.display = 'none';
-  newMessageLink ? newMessageLink.insertAdjacentElement('afterend', bulkActionsCancelButton) : null;
-
-  const selectAllButton = createSecondaryButton('Select All');
-  selectAllButton.style.marginRight = '10px';
-
-  const validateBulkArchiveButton = createPrimaryButton('Archive selected messages');
-  const validateBulkPinButton = createPrimaryButton('Pin selected messages');
-  
-  bulkActionsButton.addEventListener('click', () => {
-    messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkArchiveButton) : null;
-    messageBoard ? messageBoard.insertAdjacentElement('beforebegin', bulkPinButton) : null;
-    bulkActionsButton.style.display = 'none';
-    bulkActionsCancelButton.style.display = 'initial';
-  });
-
-  bulkActionsCancelButton.addEventListener('click', () => {
-    location.reload();
-  });
-
-  bulkArchiveButton.addEventListener('click', () => {
-    createCheckboxesBeforeMessages();
-
-    messageBoard.insertAdjacentElement('beforebegin', selectAllButton);
-    messageBoard.insertAdjacentElement('beforebegin', validateBulkArchiveButton);
-    bulkPinButton.remove();
-    bulkArchiveButton.remove();
-  });
-
-  bulkPinButton.addEventListener('click', () => {
-    createCheckboxesBeforeMessages();
-
-    messageBoard.insertAdjacentElement('beforebegin', selectAllButton);
-    messageBoard.insertAdjacentElement('beforebegin', validateBulkPinButton);
-    bulkPinButton.remove();
-    bulkArchiveButton.remove();
-  });
-
-  selectAllButton.addEventListener('click', () => {
-    checkboxes = getAllCheckboxes();
-
-    checkboxes.forEach((checkbox) => {
-      checkbox.checked = true;
-    });
-  });
-
-  validateBulkArchiveButton.addEventListener('click', () => {
-    allMessagesId = [];
-    checkboxes = getAllCheckboxes();
-    checkboxes.forEach((checkbox) => {
-      if (checkbox.checked) {
-        messageId = getMessageId(checkbox);
-        allMessagesId.push(messageId);
-      }
-    });
-
-    chrome.runtime.sendMessage({
-      type: 'auth_api',
-      refreshToken: refreshToken,
-      clientId: clientId,
-      clientSecret: clientSecret,
-      redirectUri: redirectUri
-    }, function(response) {
-      if (response.status === 'success') {
-        apiToken = (response.data.access_token);
-
-        chrome.runtime.sendMessage({
-          type: 'archive_message',
-          bucketId: getAccountInformations()[0],
-          currentAccountSlug: getAccountInformations()[1],
-          allMessagesId: allMessagesId,
-          apiToken: apiToken
-        }, function(response) {
-          if (response.status === 'success') {
-            console.log('Messages archived successfully!');
-            location.reload();
-          }
-          else {
-            console.error('Error while archiving...');
-          }
-        });
-      }
-      else {
-        console.error('Error while connecting to Basecamp API...');
-      }
-    });
-  });
-
-  validateBulkPinButton.addEventListener('click', () => {
-    allMessagesId = [];
-    checkboxes = getAllCheckboxes();
-    checkboxes.forEach((checkbox) => {
-      if (checkbox.checked) {
-        messageId = getMessageId(checkbox);
-        allMessagesId.push(messageId);
-      }
-    });
-      chrome.runtime.sendMessage({
-        type: 'auth_api',
-        refreshToken: refreshToken,
-        clientId: clientId,
-        clientSecret: clientSecret,
-        redirectUri: redirectUri
-      }, function(response) {
-        if (response.status === 'success') {
-          apiToken = (response.data.access_token);
-
-          chrome.runtime.sendMessage({
-            type: 'pin_message',
-            bucketId: getAccountInformations()[0],
-            currentAccountSlug: getAccountInformations()[1],
-            allMessagesId: allMessagesId,
-            apiToken: apiToken
-          }, function(response) {
-            if (response.status === 'success') {
-              console.log('Messages pinned successfully!');
-              location.reload();
-            }
-            else {
-              console.error('Error while pinning...');
-            }
-          });
-        }
-        else {
-          console.error('Error while connecting to Basecamp API...');
-        }
-      });
-  });
-}
-
-bulkActions();
+createAndSetupBulkActionsButton();
