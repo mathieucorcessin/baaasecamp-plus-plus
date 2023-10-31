@@ -144,6 +144,16 @@ class DOMManipulator {
 
 		return inputElement;
 	}
+
+	static copyAttributesAndChildren(sourceElement, targetElement) {
+        for (const attribute of sourceElement.attributes) {
+            targetElement.setAttribute(attribute.name, attribute.value);
+        }
+
+        while (sourceElement.firstChild) {
+            targetElement.appendChild(sourceElement.firstChild);
+        }
+    }
 }
 class BulkAction {
 	static createAndSetupBulkActionsButton() {
@@ -359,21 +369,26 @@ class CardTable {
 		while (!cardElement.classList.contains('kanban-card')) {
 			cardElement = cardElement.parentElement;
 		}
+
+		const linkElement = cardElement.querySelector('.kanban-card__link');
+
+		const divElement = document.createElement('div');
+		DOMManipulator.copyAttributesAndChildren(linkElement, divElement);
+		linkElement.replaceWith(divElement);
 	
 		const titleElement = cardElement.querySelector('.kanban-card__title');
 		const originalTitle = titleElement.innerText;
 	
 		const inputElement = domManipulator.insertQuickEditInput(originalTitle);
 
-		inputElement.addEventListener('click', (e) => {
-			e.stopPropagation();
-		});
-
 		inputElement.addEventListener('keydown', (e) => {
 			if (e.key === 'Enter') {
+				const newLinkElement = document.createElement('a');
+				DOMManipulator.copyAttributesAndChildren(divElement, newLinkElement);
+				divElement.replaceWith(newLinkElement);
 				const linkElement = cardElement.querySelector('.kanban-card__link');
 				const cardId = CardTable.getCardId(linkElement);
-
+				
 				CardTable.updateCardTitle(inputElement, titleElement, originalTitle, cardId);
 			}
 		});
