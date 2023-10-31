@@ -34,6 +34,8 @@ https://github.com/mathieucorcessin/baaasecamp-plus-plus/assets/110381337/de86d0
     1. Add your `clientId`, `clientSecret`, `redirectUri` and `refreshToken`. You can get this informations by following [this link](https://github.com/basecamp/api/blob/master/sections/authentication.md#oauth-2-from-scratch).
     2. Save.
 
+![settings-form](https://github.com/mathieucorcessin/baaasecamp-plus-plus/assets/110381337/79b508eb-ee24-4854-b2b4-e0e9a7e93fef)
+
 Baaasecamp++ should now be installed and active on Basecamp.
 
 ## Help
