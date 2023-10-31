@@ -21,13 +21,12 @@ https://user-images.githubusercontent.com/110381337/206746975-f11188e6-d1ee-420a
 ## How to install
 
 1. Download the latest release of the extension from the [releases page](https://github.com/mathieucorcessin/baaasecamp-plus-plus/releases) on GitHub.
-2. Unzip the downloaded file.
-    1. Open `basecamp.js` file.
-    2. Replace `clientId`, `clientSecret`, `redirectUri` and `refreshToken` by your own. You can get this informations by following [this link](https://github.com/basecamp/api/blob/master/sections/authentication.md#oauth-2-from-scratch).
-    3. Save.
-3. In Google Chrome (or Brave), open the Extensions page (chrome://extensions/).
-4. Enable Developer mode by clicking the toggle switch in the top right corner of the page.
-5. Click the Load unpacked button and select the directory where you unzipped the extension files.
+2. In Google Chrome (or Brave), open the Extensions page (chrome://extensions/).
+3. Enable Developer mode by clicking the toggle switch in the top right corner of the page.
+4. Click the Load unpacked button and select the directory where you unzipped the extension files.
+5. Click the extension icon to display the settings form.
+    1. Add your `clientId`, `clientSecret`, `redirectUri` and `refreshToken`. You can get this informations by following [this link](https://github.com/basecamp/api/blob/master/sections/authentication.md#oauth-2-from-scratch).
+    2. Save.
 
 Baaasecamp++ should now be installed and active on Basecamp.
 
