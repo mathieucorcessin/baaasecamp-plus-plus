@@ -18,6 +18,12 @@ You can select multiple messages to pin at once.
 
 https://user-images.githubusercontent.com/110381337/206746975-f11188e6-d1ee-420a-b294-8f879586261f.mov
 
+### Kanban Cards - Quick edit
+
+You can quick edit the title of Kanban Cards. Click, edit and press Enter ✨
+
+https://github.com/mathieucorcessin/baaasecamp-plus-plus/assets/110381337/de86d0e8-3388-4287-88df-9376a1b7a7a0
+
 ## How to install
 
 1. Download the latest release of the extension from the [releases page](https://github.com/mathieucorcessin/baaasecamp-plus-plus/releases) on GitHub.
