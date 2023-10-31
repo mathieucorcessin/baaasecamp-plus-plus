@@ -120,8 +120,130 @@ class DOMManipulator {
 			});
 		}
 	}
+
+	getKanbanCards() {
+        return document.querySelectorAll('.kanban-card');
+    }
+
+    insertQuickEditIcon(card, onClickHandler) {
+        const editIcon = document.createElement('span');
+        editIcon.innerText = '✎';
+        editIcon.className = 'quick-edit-icon';
+        editIcon.onclick = onClickHandler;
+        card.insertBefore(editIcon, card.firstChild);
+		DOMManipulator.setStyle(editIcon, 'marginRight', '10px');
+
+		return editIcon;
+    }
+
+	insertQuickEditInput(originalTitle) {
+		const inputElement = document.createElement('input');
+		inputElement.type = 'text';
+		DOMManipulator.setStyle(inputElement, 'width', '100%');
+		inputElement.value = originalTitle;
+
+		return inputElement;
+	}
 }
 class BulkAction {
+	static createAndSetupBulkActionsButton() {
+        const bulkActionsButton = DOMManipulator.setStyle(
+            DOMManipulator.createButton('🛠 Bulk Actions', 'btn btn--small'),
+            'marginLeft', '10px'
+        );
+    
+        const domManipulator = new DOMManipulator();
+        const newMessageButton = domManipulator.getNewMessageButton();
+    
+        if (newMessageButton) {
+            newMessageButton.insertAdjacentElement('afterend', bulkActionsButton);
+        }
+    
+        bulkActionsButton.addEventListener('click', () => {
+            DOMManipulator.setStyle(bulkActionsButton, 'display', 'none');
+            
+            const bulkCancelButton = this.createAndSetupBulkCancelButton();
+            DOMManipulator.setStyle(bulkCancelButton, 'display', 'initial');
+            DOMManipulator.setStyle(bulkCancelButton, 'marginLeft', '10px');
+    
+            if (newMessageButton) {
+                newMessageButton.insertAdjacentElement('afterend', bulkCancelButton);
+            }
+    
+            const messageBoard = domManipulator.getMessageBoard();
+    
+            if (messageBoard) {
+                const bulkArchiveButton = this.createAndSetupBulkArchiveButton();
+                const bulkPinButton = this.createAndSetupBulkPinButton();
+                messageBoard.insertAdjacentElement('beforebegin', bulkArchiveButton);
+                messageBoard.insertAdjacentElement('beforebegin', bulkPinButton);
+            }
+        });
+    }
+
+	static createAndSetupBulkArchiveButton() {
+		const bulkArchiveButton = DOMManipulator.setStyle(
+			DOMManipulator.createButton('📁 Bulk Archive', 'btn btn--small bsc-plus-plus--bulk'),
+			'marginRight', '10px'
+		);
+	
+		bulkArchiveButton.addEventListener('click', () => {
+			const domManipulator = new DOMManipulator();
+			DOMManipulator.insertCheckboxesAndCreateSelectAllButton(domManipulator, domManipulator.getMessages());
+	
+			const messageBoard = domManipulator.getMessageBoard();
+	
+			if (messageBoard) {
+				const submitButton = DOMManipulator.createButton('Archive selected messages', 'btn btn--small btn--primary');
+				messageBoard.insertAdjacentElement('beforebegin', submitButton);
+	
+				submitButton.addEventListener('click', () => {
+					BulkAction.performBulkAction('archive');
+				});
+			}
+		});
+	
+		return bulkArchiveButton;
+	}
+
+	static createAndSetupBulkPinButton() {
+		const bulkPinButton = DOMManipulator.setStyle(
+			DOMManipulator.createButton('📌 Bulk Pin', 'btn btn--small bsc-plus-plus--bulk'),
+			'marginRight', '10px'
+		);
+	
+		bulkPinButton.addEventListener('click', () => {
+			const domManipulator = new DOMManipulator();
+			DOMManipulator.insertCheckboxesAndCreateSelectAllButton(domManipulator, domManipulator.getMessages());
+	
+			const messageBoard = domManipulator.getMessageBoard();
+	
+			if (messageBoard) {
+				const submitButton = DOMManipulator.createButton('Pin selected messages', 'btn btn--small btn--primary');
+				messageBoard.insertAdjacentElement('beforebegin', submitButton);
+	
+				submitButton.addEventListener('click', () => {
+					BulkAction.performBulkAction('pin');
+				});
+			}
+		});
+	
+		return bulkPinButton;
+	}	
+	
+	static createAndSetupBulkCancelButton() {
+		const bulkCancelButton = DOMManipulator.setStyle(
+			DOMManipulator.createButton('Cancel', 'btn btn--small'),
+			'display', 'none'
+		);
+	
+		bulkCancelButton.addEventListener('click', () => {
+			location.reload();
+		});
+	
+		return bulkCancelButton;
+	}	
+
 	static toggleCheckboxes(selectAllButton) {
 		const domManipulator = new DOMManipulator();
 		let checkboxes = domManipulator.getAllCheckboxes();
@@ -219,102 +341,97 @@ class BulkAction {
 	}
 }
 
-function createAndSetupBulkActionsButton() {
-	const bulkActionsButton = DOMManipulator.setStyle(
-		DOMManipulator.createButton('🛠 Bulk Actions', 'btn btn--small'),
-		'marginLeft', '10px'
-	);
+class CardTable {
+	static setupQuickEditIcons() {
+        const domManipulator = new DOMManipulator();
+        const kanbanCards = domManipulator.getKanbanCards();
 
-	const domManipulator = new DOMManipulator();
-	const newMessageButton = domManipulator.getNewMessageButton();
+        kanbanCards.forEach(card => {
+            domManipulator.insertQuickEditIcon(card, this.handleQuickEditClick);
+        });
+    }
 
-	if (newMessageButton) {
-		newMessageButton.insertAdjacentElement('afterend', bulkActionsButton);
+	static handleQuickEditClick(event) {
+		event.preventDefault();
+		const domManipulator = new DOMManipulator();
+		
+		let cardElement = event.target;
+		while (!cardElement.classList.contains('kanban-card')) {
+			cardElement = cardElement.parentElement;
+		}
+	
+		const titleElement = cardElement.querySelector('.kanban-card__title');
+		const originalTitle = titleElement.innerText;
+	
+		const inputElement = domManipulator.insertQuickEditInput(originalTitle);
+
+		inputElement.addEventListener('click', (e) => {
+			e.stopPropagation();
+		});
+
+		inputElement.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				const linkElement = cardElement.querySelector('.kanban-card__link');
+				const cardId = CardTable.getCardId(linkElement);
+
+				CardTable.updateCardTitle(inputElement, titleElement, originalTitle, cardId);
+			}
+		});
+
+		titleElement.replaceWith(inputElement);
+		inputElement.focus();
 	}
 
-	const bulkArchiveButton = createAndSetupBulkArchiveButton();
-	const bulkPinButton = createAndSetupBulkPinButton();
-	const bulkCancelButton = createAndSetupBulkCancelButton();
+	static getCardId(linkElement) {
+		const urlObject = new URL(linkElement.href);
+		const path = urlObject.pathname;
+		const segments = path.split('/');
+		return segments[segments.length - 1];
+	}	
+	
+	static updateCardTitle(inputElement, titleElement, originalTitle, cardId) {
+		const newTitle = inputElement.value;
+	
+		const userSettings = new UserSettings();
+		userSettings.loadData().then(() => {
+			chrome.runtime.sendMessage({
+				type: 'auth_api',
+				refreshToken: userSettings.getRefreshToken(),
+				clientId: userSettings.getClientId(),
+				clientSecret: userSettings.getClientSecret(),
+				redirectUri: userSettings.getRedirectUri()
+			}, function(response) {
+				if (response.status === 'success') {
+					const apiToken = response.data.access_token;
+					const domManipulator = new DOMManipulator;
 
-	bulkActionsButton.addEventListener('click', () => {
-		DOMManipulator.setStyle(bulkActionsButton, 'display', 'none');
-		DOMManipulator.setStyle(bulkCancelButton, 'display', 'initial');
-		DOMManipulator.setStyle(bulkCancelButton, 'marginLeft', '10px');
-
-		if (newMessageButton) {
-			newMessageButton.insertAdjacentElement('afterend', bulkCancelButton);
-		}
-
-		const messageBoard = domManipulator.getMessageBoard();
-
-		if (messageBoard) {
-			messageBoard.insertAdjacentElement('beforebegin', bulkArchiveButton);
-			messageBoard.insertAdjacentElement('beforebegin', bulkPinButton);
-		}
-	});
-}
-
-function createAndSetupBulkArchiveButton() {
-	const bulkArchiveButton = DOMManipulator.setStyle(
-		DOMManipulator.createButton('📁 Bulk Archive', 'btn btn--small bsc-plus-plus--bulk'),
-		'marginRight', '10px'
-	);
-
-	bulkArchiveButton.addEventListener('click', () => {
-		const domManipulator = new DOMManipulator();
-		DOMManipulator.insertCheckboxesAndCreateSelectAllButton(domManipulator, domManipulator.getMessages());
-
-		const messageBoard = domManipulator.getMessageBoard();
-
-		if (messageBoard) {
-			const submitButton = DOMManipulator.createButton('Archive selected messages', 'btn btn--small btn--primary');
-			messageBoard.insertAdjacentElement('beforebegin', submitButton);
-
-			submitButton.addEventListener('click', () => {
-				BulkAction.performBulkAction('archive');
+					chrome.runtime.sendMessage({
+						type: 'update_card_title',
+						bucketId: domManipulator.getBucketId(),
+						currentAccountSlug: domManipulator.getCurrentAccountSlug(),
+						cardId: cardId,
+						newTitle: newTitle,
+						apiToken: apiToken
+					}, function(response) {
+						if (response.status === 'success') {
+							console.log('Card title updated successfully!');
+							titleElement.innerText = newTitle;
+							inputElement.replaceWith(titleElement);
+						} else {
+							console.error('Error while updating card title: ' + response.error);
+							titleElement.innerText = originalTitle;
+							inputElement.replaceWith(titleElement);
+						}
+					});
+				} else {
+					console.error('Error while connecting to Basecamp API...');
+				}
 			});
-		}
-	});
-
-	return bulkArchiveButton;
+		}).catch(error => {
+			console.error(error);
+		});
+	}	
 }
 
-function createAndSetupBulkPinButton() {
-	const bulkPinButton = DOMManipulator.setStyle(
-		DOMManipulator.createButton('📌 Bulk Pin', 'btn btn--small bsc-plus-plus--bulk'),
-		'marginRight', '10px'
-	);
-
-	bulkPinButton.addEventListener('click', () => {
-		const domManipulator = new DOMManipulator();
-		DOMManipulator.insertCheckboxesAndCreateSelectAllButton(domManipulator, domManipulator.getMessages());
-
-		const messageBoard = domManipulator.getMessageBoard();
-
-		if (messageBoard) {
-			const submitButton = DOMManipulator.createButton('Pin selected messages', 'btn btn--small btn--primary');
-			messageBoard.insertAdjacentElement('beforebegin', submitButton);
-
-			submitButton.addEventListener('click', () => {
-				BulkAction.performBulkAction('pin');
-			});
-		}
-	});
-
-	return bulkPinButton;
-}
-
-function createAndSetupBulkCancelButton() {
-	const bulkCancelButton = DOMManipulator.setStyle(
-		DOMManipulator.createButton('Cancel', 'btn btn--small'),
-		'display', 'none'
-	);
-
-	bulkCancelButton.addEventListener('click', () => {
-		location.reload();
-	});
-
-	return bulkCancelButton;
-}
-
-createAndSetupBulkActionsButton();
+BulkAction.createAndSetupBulkActionsButton();
+CardTable.setupQuickEditIcons();
